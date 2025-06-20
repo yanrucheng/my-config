@@ -16,7 +16,7 @@ This package is not published to PyPI. You can install it using one of the follo
 ### From Git Repository
 
 ```bash
-pip install git+https://github.com/yourusername/my-config.git
+pip install git+https://github.com/yourusername/my-config.git@<version>:egg=my_config
 ```
 
 Or specify it in requirements.txt:
