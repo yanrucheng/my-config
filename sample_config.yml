@@ -1,0 +1,30 @@
+# Sample configuration file for my-config package
+
+# Database configuration
+database:
+  host: localhost
+  port: 5432
+  username: db_user
+  password: db_password
+  name: my_database
+
+# API configuration
+api:
+  base_url: https://api.example.com/v1
+  timeout: 30
+  retry_attempts: 3
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+
+# Logging configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: logs/app.log
+
+# Feature flags
+features:
+  enable_caching: true
+  enable_metrics: true
+  enable_rate_limiting: false
