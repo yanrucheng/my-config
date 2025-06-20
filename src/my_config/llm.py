@@ -64,3 +64,14 @@ class LLMConfig(BaseConfig[ModelConfig]):
             if model.tags and tag in model.tags:
                 return model
         return None
+    
+    def get_model(self, model_name: str, provider_name: Optional[str] = None) -> Optional[ModelConfig]:
+        """Get a model configuration by name and optional provider"""
+        if provider_name:
+            full_name = f"{provider_name}/{model_name}"
+            return self.get(full_name)
+        
+        for model in self.data.values():
+            if model.name.endswith(f"/{model_name}") or model.model == model_name:
+                return model
+        return None
