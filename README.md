@@ -36,6 +36,18 @@ cd my-config
 pip install -e .
 ```
 
+# My Config
+
+A robust configuration management library for Python applications.
+
+## Features
+
+- Singleton-based configuration classes
+- File-based configuration with YAML support
+- Environment-aware configuration loading
+- Recursive configuration loading protection
+- Robust error handling
+
 ## Usage
 
 ### Basic Configuration
@@ -48,6 +60,10 @@ class MyAppConfig(BaseConfig):
 
 # Get the singleton instance
 config = MyAppConfig.get_instance()
+
+# Get configuration values with defaults
+db_host = config.get('database', {}).get('host', 'localhost')
+port = config.get('port', 8080)
 
 # Access configuration values
 db_url = config.get("database_url")

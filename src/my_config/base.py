@@ -24,9 +24,21 @@ class BaseConfig(GenericSingletonFactory, Generic[T]):
         self.load_from_file()
         self._process_config()
     
-    def get(self, name: str) -> Optional[T]:
-        """Get a configuration value by name."""
-        return self.data.get(name)
+    def get(self, name: str, default: Optional[T] = None) -> Optional[T]:
+        """Get a configuration value by name.
+        
+        Args:
+            name: The name of the configuration value to get
+            default: The default value to return if the configuration value is not found
+            
+        Returns:
+            The configuration value, or the default value if not found
+        """
+        try:
+            return self.data.get(name, default)
+        except Exception:
+            # If data access fails for any reason, return the default value
+            return default
 
     def get_config_file_path(self) -> str:
         """Get the path to the configuration file.
@@ -43,24 +55,46 @@ class BaseConfig(GenericSingletonFactory, Generic[T]):
     
     def load_from_file(self) -> None:
         """Generic file loading that child classes can use"""
-        path = self.get_config_file_path()
-        logger.info(f"Loading configuration from: {path}")
-        
         try:
-            with open(path, 'r', encoding='utf-8') as f:
-                config_data = yaml.safe_load(f) or {}
-            self._data = config_data
+            path = self.get_config_file_path()
             
-            # Log configuration details
-            config_keys = list(config_data.keys())
-            logger.info(f"Successfully loaded configuration from {path}")
-            logger.info(f"Configuration contains {len(config_keys)} top-level keys: {', '.join(config_keys)}")
-        except FileNotFoundError:
-            logger.warning(f"Configuration file not found: {path}")
-            self._data = {}
+            # Use a try-except block for logging to prevent recursion
+            try:
+                logger.info(f"Loading configuration from: {path}")
+            except Exception:
+                pass  # Ignore logging errors
+            
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    config_data = yaml.safe_load(f) or {}
+                self._data = config_data
+                
+                # Log configuration details - wrapped in try-except to prevent recursion
+                try:
+                    config_keys = list(config_data.keys())
+                    logger.info(f"Successfully loaded configuration from {path}")
+                    logger.info(f"Configuration contains {len(config_keys)} top-level keys: {', '.join(config_keys)}")
+                except Exception:
+                    pass  # Ignore logging errors
+            except FileNotFoundError:
+                try:
+                    logger.warning(f"Configuration file not found: {path}")
+                except Exception:
+                    pass  # Ignore logging errors
+                self._data = {}
+            except Exception as e:
+                try:
+                    logger.error(f"Error loading configuration from {path}: {e}")
+                except Exception:
+                    pass  # Ignore logging errors
+                self._data = {}
         except Exception as e:
-            logger.error(f"Error loading configuration from {path}: {e}")
+            # If even getting the config path fails, set empty data
             self._data = {}
+            try:
+                logger.error(f"Critical error in configuration loading: {e}")
+            except Exception:
+                pass  # Ignore logging errors
 
     def _process_config(self) -> None:
         """Process the loaded configuration data.
