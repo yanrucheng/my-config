@@ -7,6 +7,7 @@ from typing import Dict, Optional, TypeVar, Generic, Any
 import logging
 import yaml
 import os
+import inspect
 
 from jinnang.common import SingletonFileLoader
 
@@ -17,17 +18,27 @@ T = TypeVar('T')
 class BaseConfig(SingletonFileLoader, Generic[T]):
     """Base configuration class with caller-aware file loading"""
     
-    def __init__(self, filename: str = None,  caller_module_path: Optional[str] = None):
+    def __init__(self, filename: str = None,  caller_module_path: Optional[str] = None, **kwargs: Any):
         
         if filename is None:
             filename = 'conf/conf.yml'
             logger.warning(f'It is not recommended to pass empty filename to BaseConfig. filename is set to default value: {filename}')
         
-        super().__init__(filename, caller_module_path)
+        if caller_module_path is None:
+            # Determine the path of the calling module dynamically
+            frame = inspect.currentframe()
+            if frame is not None and frame.f_back is not None:
+                caller_module_path = frame.f_back.f_globals.get('__file__')
+            if caller_module_path is None:
+                logger.warning("Could not determine caller_module_path automatically. Please provide it explicitly.")
+
+        super().__init__(filename, caller_module_path, **kwargs)
         self._data: Dict[str, T] = {}
         self.data: Dict[str, T] = {}
         self.load_from_file()
-        self._process_config()
+        self.config = self._process_config(self._data)
+        self.data = self.config  # Make data accessible via get() method
+
     
     def get(self, name: str, default: Optional[T] = None) -> Optional[T]:
         """Get a configuration value by name.
@@ -88,13 +99,9 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
             except Exception:
                 pass  # Ignore logging errors
 
-    def _process_config(self) -> None:
-        """Process the loaded configuration data.
-        
-        This method can be overridden by child classes to implement
-        custom processing logic.
-        """
-        self.data = {**self._data}
+    def _process_config(self, config: T) -> T:
+        """Hook for subclasses to process the loaded configuration."""
+        return config
 
 
 class DefaultConfig(BaseConfig):

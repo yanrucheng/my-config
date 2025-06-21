@@ -4,7 +4,7 @@ This module provides configuration management classes for different aspects of a
 """
 
 from my_config.base import BaseConfig, DefaultConfig
-from my_config.env_aware import EnvAwareConfig, APIConfig
+from my_config.env_aware import EnvAwareConfig
 from my_config.llm import ModelConfig, LLMConfig
 from my_config.env import Env, get_env, is_dev, is_boe, is_prod
 
