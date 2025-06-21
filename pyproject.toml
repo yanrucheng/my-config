@@ -11,6 +11,7 @@ requires-python = ">=3.8"
 dependencies = [
     "pyyaml>=6.0",
     "pytz",
+    "jinnang @ git+https://github.com/yanrucheng/jinnang-utils@v0.2.1.dev06220116#egg=jinnang",
 ]
 
 [project.optional-dependencies]
