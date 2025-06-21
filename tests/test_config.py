@@ -10,7 +10,7 @@ import yaml
 from unittest.mock import patch
 
 from my_config import BaseConfig, EnvAwareConfig, Env, get_env
-from my_config.utils.singleton import GenericSingletonFactory
+from jinnang.common import SingletonFileLoader
 
 
 class TestBaseConfig(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestBaseConfig(unittest.TestCase):
             yaml.dump(self.config_data, f)
 
         # Patch the resolve_file_path method to return our temporary config path
-        self.patcher = patch('my_config.utils.singleton.GenericSingletonFactory.resolve_file_path', return_value=self.config_path)
+        self.patcher = patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.config_path)
         self.mock_resolve_file_path = self.patcher.start()
 
     def tearDown(self):

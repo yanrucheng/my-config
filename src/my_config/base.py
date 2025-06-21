@@ -8,17 +8,22 @@ import logging
 import yaml
 import os
 
-from my_config.utils.singleton import GenericSingletonFactory
+from jinnang.common import SingletonFileLoader
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
-class BaseConfig(GenericSingletonFactory, Generic[T]):
-    """Base configuration class with generic file loading"""
-    CONFIG_FILENAME = "config.yml"
+class BaseConfig(SingletonFileLoader, Generic[T]):
+    """Base configuration class with caller-aware file loading"""
     
-    def __init__(self):
+    def __init__(self, filename: str = None,  caller_module_path: Optional[str] = None):
+        
+        if filename is None:
+            filename = 'conf/conf.yml'
+            logger.warning(f'It is not recommended to pass empty filename to BaseConfig. filename is set to default value: {filename}')
+        
+        super().__init__(filename, caller_module_path)
         self._data: Dict[str, T] = {}
         self.data: Dict[str, T] = {}
         self.load_from_file()
@@ -40,23 +45,10 @@ class BaseConfig(GenericSingletonFactory, Generic[T]):
             # If data access fails for any reason, return the default value
             return default
 
-    def get_config_file_path(self) -> str:
-        """Get the path to the configuration file.
-        
-        Priority order:
-        1. Explicitly specified path in code (CONFIG_FILENAME)
-        2. Path from CONFIG_PATH environment variable (if exists)
-        3. Search in default locations
-        """
-        return GenericSingletonFactory.resolve_file_path(
-            filename=self.CONFIG_FILENAME,
-            env_var_name="CONFIG_PATH"
-        )
-    
     def load_from_file(self) -> None:
         """Generic file loading that child classes can use"""
         try:
-            path = self.get_config_file_path()
+            path = self.filepath
             
             # Use a try-except block for logging to prevent recursion
             try:
@@ -106,5 +98,5 @@ class BaseConfig(GenericSingletonFactory, Generic[T]):
 
 
 class DefaultConfig(BaseConfig):
-    """Default configuration class with predefined config file path"""
-    CONFIG_FILENAME = "./conf/conf.yml"
+    """Default configuration class with automatic caller detection"""
+    pass

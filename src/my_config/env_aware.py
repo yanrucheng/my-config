@@ -9,6 +9,7 @@ import os
 
 from my_config.env import get_env, Env
 from my_config.base import BaseConfig
+from jinnang.common.patterns import SingletonFileLoader
 
 logger = logging.getLogger(__name__)
 
@@ -20,21 +21,46 @@ class EnvAwareConfig(BaseConfig[T]):
     BOE_CONFIG_FILENAME = "./conf/boe_conf.yml"
     PROD_CONFIG_FILENAME = "./conf/prod_conf.yml"
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, caller_module_path: Optional[str] = None):
+        filename = self._determine_config_filename()
+        # If filename is an absolute path (from ENV_CONFIG_PATH), handle it specially
+        if os.path.isabs(filename):
+            # Initialize the SingletonFileLoader part without calling BaseConfig.__init__
+            from jinnang.common.patterns import SingletonFileLoader
+            SingletonFileLoader.__init__(self, filename=None, caller_module_path=caller_module_path)
+            # Set the filepath directly
+            self.loaded_filepath = filename if os.path.exists(filename) else None
+            # Initialize BaseConfig data structures
+            self._data = {}
+            self.data = {}
+            # Load the file
+            self.load_from_file()
+            self._process_config()
+        else:
+            super().__init__(filename=filename, caller_module_path=caller_module_path)
     
-    def get_config_file_path(self) -> str:
+    def _determine_config_filename(self) -> str:
         """Determine which config file to use with fallback logic
         
         Priority order:
-        1. Explicitly specified path in code (environment-specific CONFIG_FILENAME)
-        2. Path from ENV_CONFIG_PATH environment variable (if exists)
-        3. Search in default locations with environment-specific fallback order
+        1. Path from ENV_CONFIG_PATH environment variable (if exists and file exists)
+        2. Environment-specific config file with fallback order
+        
+        Returns:
+            str: The filename to use for configuration
         """
         env = get_env()
-        fallback_order = []
         env_var_name = "ENV_CONFIG_PATH"
         
+        # First check environment variable
+        env_path = os.getenv(env_var_name)
+        if env_path and os.path.exists(env_path):
+            logger.info(f"Using configuration from environment variable {env_var_name}: {env_path}")
+            return env_path
+        elif env_path:
+            logger.warning(f"Path from environment variable {env_var_name} does not exist: {env_path}")
+        
+        # Determine fallback order based on environment
         if env == Env.PROD:
             fallback_order = [
                 self.PROD_CONFIG_FILENAME,
@@ -54,42 +80,28 @@ class EnvAwareConfig(BaseConfig[T]):
         
         logger.info(f"Searching for configuration files in {len(fallback_order)} possible locations")
         
-        # First check environment variable (lower priority than code-specified paths)
-        env_path = os.getenv(env_var_name)
-        if env_path:
-            logger.info(f"Found environment variable {env_var_name}={env_path}")
-            if os.path.exists(env_path):
-                logger.info(f"Using configuration from environment variable: {env_path}")
-                return env_path
-            else:
-                logger.warning(f"Path from environment variable {env_var_name} does not exist: {env_path}")
-        
         # Try each file in order until one is found
-        found_files = []
         for config_file in fallback_order:
             try:
-                resolved_path = self.resolve_file_path(filename=config_file)
-                found_files.append((config_file, resolved_path, True))
-                logger.info(f"Selected configuration file: {resolved_path} (from {config_file})")
-                return resolved_path
+                # Use the static method from SingletonFileLoader to check if file exists
+                resolved_path = SingletonFileLoader.resolve_file_path(filename=config_file)
+                logger.info(f"Found configuration file: {resolved_path} (from {config_file})")
+                return config_file  # Return the filename, not the resolved path
             except FileNotFoundError:
-                found_files.append((config_file, None, False))
+                logger.debug(f"Configuration file not found: {config_file}")
                 continue
         
-        # Log all attempted paths for debugging
-        logger.error(f"Configuration file resolution failed. Attempted files:")
-        for config_name, path, exists in found_files:
-            status = "Found" if exists else "Not found"
-            logger.error(f"  - {config_name}: {status} {path if path else ''}")
-        
-        # If no config file is found, return the default for the environment
-        # This will likely raise an error when trying to load, but that's handled in BaseConfig
+        # If no config file is found, return the primary config for the environment
+        # The file loading will handle the FileNotFoundError appropriately
         if env == Env.PROD:
-            return self.resolve_file_path(filename=self.PROD_CONFIG_FILENAME)
+            logger.warning(f"No configuration files found, defaulting to: {self.PROD_CONFIG_FILENAME}")
+            return self.PROD_CONFIG_FILENAME
         elif env == Env.BOE:
-            return self.resolve_file_path(filename=self.BOE_CONFIG_FILENAME)
+            logger.warning(f"No configuration files found, defaulting to: {self.BOE_CONFIG_FILENAME}")
+            return self.BOE_CONFIG_FILENAME
         else:
-            return self.resolve_file_path(filename=self.DEV_CONFIG_FILENAME)
+            logger.warning(f"No configuration files found, defaulting to: {self.DEV_CONFIG_FILENAME}")
+            return self.DEV_CONFIG_FILENAME
 
 
 class APIConfig(EnvAwareConfig[Dict[str, Any]]):
@@ -97,3 +109,6 @@ class APIConfig(EnvAwareConfig[Dict[str, Any]]):
     DEV_CONFIG_FILENAME = "./conf/api.yml"
     BOE_CONFIG_FILENAME = "./conf/boe_api.yml"
     PROD_CONFIG_FILENAME = "./conf/prod_api.yml"
+    
+    def __init__(self, caller_module_path: Optional[str] = None):
+        super().__init__(caller_module_path=caller_module_path)
