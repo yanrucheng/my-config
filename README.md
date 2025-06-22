@@ -7,7 +7,7 @@
 -   **Base Configuration**: Load configurations from YAML files with environment variable resolution.
 -   **Environment-Aware Configuration**: Automatically load environment-specific configurations (e.g., `dev`, `prod`) based on the `APP_ENV` environment variable.
 -   **LLM Configuration**: Specialized support for managing Language Model API keys, base URLs, and model-specific settings.
--   **Singleton Pattern**: Ensures efficient resource usage by loading configuration files only once.
+-   **Efficient Resource Usage**: Configuration files are loaded efficiently, ensuring optimal resource utilization.
 -   **Caller-Aware File Loading**: Intelligently locates configuration files relative to the calling module.
 -   **Environment Variable Resolution**: Seamlessly injects environment variables into configuration values using `${VAR_NAME}` syntax.
 

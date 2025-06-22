@@ -9,14 +9,14 @@ import yaml
 import os
 import inspect
 
-from jinnang.common.patterns import SingletonFileLoader
+from jinnang.path.path import RelPathSeeker
 from jinnang.verbosity import Verbosity
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
-class BaseConfig(SingletonFileLoader, Generic[T]):
+class BaseConfig(RelPathSeeker, Generic[T]):
     """Base configuration class with caller-aware file loading"""
     
     def __init__(
@@ -39,22 +39,20 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
             if caller_module_path is None:
                 logger.warning("Could not determine caller_module_path automatically. Please provide it explicitly.")
 
-        # Initialize SingletonFileLoader with proper parameters
-        super().__init__(
+        # Initialize RelPathSeeker with proper parameters
+        RelPathSeeker.__init__(
+            self,
             filename=filename,
             caller_module_path=caller_module_path,
             verbosity=verbosity,
             **kwargs
         )
         
-        # Initialize data attributes only once per singleton instance
-        if not hasattr(self, '_config_initialized'):
-            self._data: Dict[str, T] = {}
-            self.data: Dict[str, T] = {}
-            self.load_from_file()
-            self.config = self._process_config(self._data)
-            self.data = self.config  # Make data accessible via get() method
-            self._config_initialized = True
+        self._data: Dict[str, T] = {}
+        self.data: Dict[str, T] = {}
+        self.load_from_file()
+        self.config = self._process_config(self._data)
+        self.data = self.config  # Make data accessible via get() method
 
     
     def get(self, name: str, default: Optional[T] = None) -> Optional[T]:
@@ -75,9 +73,9 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
 
     def load_from_file(self) -> None:
         """Generic file loading that child classes can use"""
-        # Check if file was successfully loaded by SingletonFileLoader
+        # Check if file was successfully loaded by RelPathSeeker
         if not self.loaded_filepath:
-            logger.warning("No configuration file was loaded by SingletonFileLoader")
+            logger.warning("No configuration file was loaded by RelPathSeeker")
             self._data = {}
             return
             

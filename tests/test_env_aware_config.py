@@ -64,14 +64,12 @@ class TestEnvAwareConfig(unittest.TestCase):
 
     def tearDown(self):
         self.temp_dir.cleanup()
-        # Clear singleton instances to ensure fresh instances for each test
-        from my_config.base import BaseConfig
-        BaseConfig._instances.clear()
+
 
     @patch.dict(os.environ, {'APP_ENV': 'development'})
     def test_env_aware_config_with_app_env_dev(self):
         """Test that dev config is loaded when APP_ENV is set to development."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path') as mock_resolve:
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
             def side_effect(filename=None, **kwargs):
                 if filename == "config.dev.yml":
                     return self.dev_config_path
@@ -92,7 +90,7 @@ class TestEnvAwareConfig(unittest.TestCase):
     @patch.dict(os.environ, {'APP_ENV': 'production'})
     def test_env_aware_config_with_app_env_prod(self):
         """Test that prod config is loaded when APP_ENV is set to production."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path') as mock_resolve:
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
             def side_effect(filename=None, **kwargs):
                 if filename == "config.prod.yml":
                     return self.prod_config_path
@@ -113,7 +111,7 @@ class TestEnvAwareConfig(unittest.TestCase):
     @patch.dict(os.environ, {'APP_ENV': 'boe'})
     def test_env_aware_config_with_app_env_boe(self):
         """Test that boe config is loaded when APP_ENV is set to boe."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path') as mock_resolve:
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
             def side_effect(filename=None, **kwargs):
                 if filename == "config.boe.yml":
                     return self.boe_config_path
@@ -134,7 +132,7 @@ class TestEnvAwareConfig(unittest.TestCase):
     def test_env_aware_config_fallback_order(self):
         """Test fallback order when APP_ENV is not set."""
         with patch.dict(os.environ, {}, clear=True):  # Clear APP_ENV
-            with patch('my_config.base.SingletonFileLoader.resolve_file_path') as mock_resolve:
+            with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
                 def side_effect(filename=None, **kwargs):
                     if filename == "config.prod.yml":
                         raise FileNotFoundError(f"File {filename} not found")
@@ -157,7 +155,7 @@ class TestEnvAwareConfig(unittest.TestCase):
 
     def test_env_aware_config_no_files_found(self):
         """Test that FileNotFoundError is raised when no config files exist."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path') as mock_resolve:
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
             mock_resolve.side_effect = FileNotFoundError("File not found")
             
             with self.assertRaises(FileNotFoundError) as context:

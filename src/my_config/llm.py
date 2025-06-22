@@ -1,7 +1,7 @@
 """LLM-specific configuration classes.
 
 This module provides configuration classes for language models and their providers.
-Follows jinnang SingletonFileLoader best practices for robust configuration management.
+Follows jinnang RelPathSeeker best practices for robust configuration management.
 """
 
 from dataclasses import dataclass
@@ -112,11 +112,11 @@ class ModelConfig:
 class LLMConfig(BaseConfig[ModelConfig]):
     """LLM-specific configuration with provider processing.
     
-    Follows SingletonFileLoader best practices:
+    Follows RelPathSeeker best practices:
     - Supports both filename-based and explicit path loading
     - Provides flexible search locations
     - Includes proper error handling and validation
-    - Uses singleton pattern for efficient resource usage
+
     """
     CONFIG_FILENAME = "conf/llm.yml"
     
@@ -138,7 +138,8 @@ class LLMConfig(BaseConfig[ModelConfig]):
         if filename is None:
             filename = self.CONFIG_FILENAME
             
-        super().__init__(
+        BaseConfig.__init__(
+            self,
             filename=filename,
             verbosity=verbosity,
             caller_module_path=caller_module_path or __file__,

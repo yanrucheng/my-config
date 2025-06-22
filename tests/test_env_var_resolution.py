@@ -15,8 +15,7 @@ class TestEnvVarResolution(unittest.TestCase):
     """Test environment variable resolution in BaseConfig"""
     
     def setUp(self):
-        # Clear any existing singleton instances
-        BaseConfig._instances.clear()
+
         
         # Set up test environment variables
         os.environ['TEST_VAR'] = 'test_value'
@@ -36,8 +35,7 @@ class TestEnvVarResolution(unittest.TestCase):
             if var in os.environ:
                 del os.environ[var]
         
-        # Clear singleton instances
-        BaseConfig._instances.clear()
+
     
     def test_resolve_env_vars_success(self):
         """Test successful environment variable resolution"""

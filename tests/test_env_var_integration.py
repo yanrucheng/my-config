@@ -16,8 +16,7 @@ class TestEnvVarIntegration(unittest.TestCase):
     """Integration tests for environment variable resolution across different config types"""
     
     def setUp(self):
-        # Clear any existing singleton instances
-        BaseConfig._instances.clear()
+
         
         # Create temporary directory for test files
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -38,9 +37,7 @@ class TestEnvVarIntegration(unittest.TestCase):
             if var in os.environ:
                 del os.environ[var]
         
-        # Clear singleton instances
-        from jinnang.common.patterns import Singleton
-        Singleton._instances.clear()
+
     
     def test_base_config_integration(self):
         """Test environment variable resolution in BaseConfig with file loading"""
@@ -58,7 +55,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         with open(config_path, 'w') as f:
             yaml.dump(config_data, f)
         
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=config_path):
             config = BaseConfig(
                 filename='integration_config.yml',
                 caller_module_path=__file__,
@@ -102,7 +99,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         
         # Test with DEV environment
         with patch.dict(os.environ, {'APP_ENV': 'development'}):
-            with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path') as mock_resolve:
+            with patch('jinnang.path.path.RelPathSeeker.resolve_file_path') as mock_resolve:
                 def side_effect(filename=None, **kwargs):
                     if filename == "integration_config.dev.yml":
                         return dev_path
@@ -154,7 +151,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         with open(config_path, 'w') as f:
             yaml.dump(llm_config_data, f)
         
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=config_path):
             config = LLMConfig(
                 filename='llm_integration_config.yml',
                 caller_module_path=__file__,
@@ -189,11 +186,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         
         def load_config(thread_id):
             try:
-                # Clear singleton to force new instance
-                from jinnang.common.patterns import Singleton
-                Singleton._instances.clear()
-                
-                with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=config_path):
+                with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=config_path):
                     config = BaseConfig(
                         filename='concurrent_config.yml',
                         caller_module_path=__file__,
@@ -238,7 +231,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         with open(config_path, 'w') as f:
             yaml.dump(initial_config, f)
         
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=config_path):
             config = BaseConfig(
                 filename='dynamic_config.yml',
                 caller_module_path=__file__,
@@ -252,11 +245,7 @@ class TestEnvVarIntegration(unittest.TestCase):
         with open(config_path, 'w') as f:
             yaml.dump(updated_config, f)
         
-        # Clear singleton and reload
-        from jinnang.common.patterns import Singleton
-        Singleton._instances.clear()
-        
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=config_path):
             config = BaseConfig(
                 filename='dynamic_config.yml',
                 caller_module_path=__file__,

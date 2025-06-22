@@ -35,7 +35,6 @@ class TestBaseConfig(unittest.TestCase):
         # Write the configuration to the file
         with open(self.config_path, "w") as f:
             yaml.dump(self.config_data, f)
-        # Copy the config file to the test directory so SingletonFileLoader can find it
         import shutil
         shutil.copy(self.config_path, os.path.join(os.path.dirname(__file__), "test_config.yml"))
 
@@ -47,8 +46,7 @@ class TestBaseConfig(unittest.TestCase):
             os.remove(config_path)
         # Clean up the temporary directory
         self.temp_dir.cleanup()
-        # Clear singleton instances to ensure fresh instances for each test
-        BaseConfig._instances.clear()
+
 
     def test_config_loading(self):
         """Test that configuration is loaded correctly from file."""

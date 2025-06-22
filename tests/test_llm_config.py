@@ -17,9 +17,7 @@ class TestLLMConfigEnvVars(unittest.TestCase):
         
     def tearDown(self):
         self.temp_dir.cleanup()
-        # Clear singleton instances to ensure fresh instances for each test
-        from my_config.base import BaseConfig
-        BaseConfig._instances.clear()
+
     
     @patch.dict(os.environ, {'OPENAI_API_KEY': 'sk-test-openai-key-123', 'ANTHROPIC_API_KEY': 'sk-ant-test-key-456'})
     def test_llm_config_with_env_vars(self):
@@ -54,7 +52,7 @@ class TestLLMConfigEnvVars(unittest.TestCase):
         with open(self.config_path, "w") as f:
             yaml.dump(config_data, f)
             
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.config_path):
             llm_config = LLMConfig(
                 filename="test_llm_env_config.yml",
                 verbosity=Verbosity.ONCE
@@ -127,13 +125,11 @@ class TestLLMConfig(unittest.TestCase):
 
     def tearDown(self):
         self.temp_dir.cleanup()
-        # Clear singleton instances to ensure fresh instances for each test
-        from jinnang.common.patterns import Singleton
-        Singleton._instances.clear()
+
 
     def test_llm_config_loading(self):
         """Test that LLMConfig loads and processes models correctly."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.llm_config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
             config = LLMConfig(
                 filename="llm.yml",
                 caller_module_path=__file__,
@@ -148,7 +144,7 @@ class TestLLMConfig(unittest.TestCase):
 
     def test_llm_config_get_model(self):
         """Test getting specific models by name."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.llm_config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
             config = LLMConfig(
                 filename="llm.yml",
                 caller_module_path=__file__,
@@ -169,7 +165,7 @@ class TestLLMConfig(unittest.TestCase):
 
     def test_llm_config_get_model_by_tag(self):
         """Test getting models by tag."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.llm_config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
             config = LLMConfig(
                 filename="llm.yml",
                 caller_module_path=__file__,
@@ -187,7 +183,7 @@ class TestLLMConfig(unittest.TestCase):
 
     def test_llm_config_get_models_by_tag(self):
         """Test getting multiple models by tag."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.llm_config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
             config = LLMConfig(
                 filename="llm.yml",
                 caller_module_path=__file__,
@@ -206,7 +202,7 @@ class TestLLMConfig(unittest.TestCase):
 
     def test_llm_config_model_api_url(self):
         """Test model API URL construction."""
-        with patch('jinnang.common.patterns.SingletonFileLoader.resolve_file_path', return_value=self.llm_config_path):
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
             config = LLMConfig(
                 filename="llm.yml",
                 caller_module_path=__file__,
