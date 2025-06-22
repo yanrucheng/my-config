@@ -136,16 +136,23 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
         elif isinstance(data, list):
             return [self._resolve_env_vars(elem) for elem in data]
         elif isinstance(data, str):
-            if data.startswith('${') and data.endswith('}'):
-                env_var_name = data[2:-1]
+            import re
+            # Pattern to match ${VAR_NAME} but not escaped \${VAR_NAME}
+            # Also handles valid variable names (alphanumeric and underscore)
+            # Must be followed by exactly one closing brace
+            pattern = r'(?<!\\)\$\{([A-Za-z_][A-Za-z0-9_]*)\}(?!\})'
+            
+            def replace_env_var(match):
+                env_var_name = match.group(1)
                 env_value = os.getenv(env_var_name)
                 if env_value is not None:
                     logger.info(f"Resolved environment variable '{env_var_name}' for config value.")
                     return env_value
                 else:
                     logger.warning(f"Environment variable '{env_var_name}' not found. Keeping placeholder as is.")
-                    return data
-            return data
+                    return match.group(0)  # Return the original placeholder
+            
+            return re.sub(pattern, replace_env_var, data)
         else:
             return data
 
