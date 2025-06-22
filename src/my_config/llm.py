@@ -164,7 +164,10 @@ class LLMConfig(BaseConfig[ModelConfig]):
             raise ValueError("Configuration missing 'providers' section")
             
         try:
-            return self._process_providers(config_data["providers"])
+            processed_data = self._process_providers(config_data["providers"])
+            # ensure config is correctly set by validating primary models
+            self._validate_primary_models(processed_data)
+            return processed_data
         except Exception as e:
             logger.error(f"Failed to process LLM configuration: {e}")
             raise ValueError(f"Invalid LLM configuration: {e}") from e
@@ -241,6 +244,43 @@ class LLMConfig(BaseConfig[ModelConfig]):
             
         logger.info(f"Successfully processed {len(data)} models from {len(providers_data)} providers")
         return data
+
+    def _validate_primary_models(self, processed_data: Dict[str, ModelConfig]) -> None:
+        """Validate that there is exactly one primary model for each type (llm and vlm).
+        
+        Args:
+            processed_data: Dictionary of processed ModelConfig objects
+            
+        Raises:
+            AssertionError: If there is not exactly one primary model of each type
+        """
+        for model_type in ['llm', 'vlm']:
+            primary_models = [model for model in processed_data.values()
+                            if model.tags and ('primary' in model.tags) and (model_type in model.tags)]
+            assert len(primary_models) == 1, (
+                f'There should be one and only one primary {model_type} model. '
+                f'Got {len(primary_models)}. Includes: {[m.name for m in primary_models]}'
+            )
+
+    def get_primary_model_config(self, model_type: str = 'llm') -> ModelConfig:
+        """Get the primary model configuration for a given type (llm or vlm).
+
+        Args:
+            model_type: The type of model to retrieve ('llm' or 'vlm').
+
+        Returns:
+            The primary ModelConfig object.
+
+        Raises:
+            AssertionError: If there is not exactly one primary model of the specified type.
+        """
+        ms = [model for model in self.data.values()
+                if model.tags and ('primary' in model.tags) and (model_type in model.tags)]
+        assert len(ms) == 1, (
+            f'There should be one and only one primary {model_type} model. '
+            f'Got {len(ms)}. Includes: {[m.name for m in ms]}'
+        )
+        return ms[0]
     
     def get_model_by_tag(self, tag: str) -> Optional[ModelConfig]:
         """Get the first model configuration that has the specified tag.

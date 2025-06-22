@@ -260,7 +260,7 @@ class TestLLMConfig(unittest.TestCase):
                         {
                             "name": "gpt-4",
                             "model": "gpt-4",
-                            "tags": ["chat", "large"],
+                            "tags": ["chat", "large", "primary", "llm"],
                             "description": "OpenAI GPT-4 model"
                         },
                         {
@@ -278,7 +278,7 @@ class TestLLMConfig(unittest.TestCase):
                         {
                             "name": "claude-3-opus",
                             "model": "claude-3-opus-20240229",
-                            "tags": ["chat", "large"],
+                            "tags": ["chat", "large", "primary", "vlm"],
                             "description": "Anthropic Claude 3 Opus model"
                         }
                     ]
@@ -305,6 +305,12 @@ class TestLLMConfig(unittest.TestCase):
                 verbosity=Verbosity.ONCE
             )
             
+            # Check that models were loaded correctly
+            self.assertEqual(len(config.data), 3)  # 2 OpenAI + 1 Anthropic
+            self.assertIn("openai/gpt-4", config.data)
+            self.assertIn("openai/gpt-3.5-turbo", config.data)
+            self.assertIn("anthropic/claude-3-opus", config.data)
+
             # Check that models were loaded correctly
             self.assertEqual(len(config.data), 3)  # 2 OpenAI + 1 Anthropic
             self.assertIn("openai/gpt-4", config.data)
