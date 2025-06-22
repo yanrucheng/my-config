@@ -23,13 +23,11 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
         self, 
         filename: Optional[str] = None,
         caller_module_path: Optional[str] = None,
-        explicit_path: Optional[str] = None,
-        search_locations: Optional[list] = None,
         verbosity: Verbosity = Verbosity.FULL,
         **kwargs: Any
     ):
         # Set default filename if none provided
-        if filename is None and explicit_path is None:
+        if filename is None:
             filename = 'conf/conf.yml'
             logger.warning(f'It is not recommended to pass empty filename to BaseConfig. filename is set to default value: {filename}')
         
@@ -45,8 +43,6 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
         super().__init__(
             filename=filename,
             caller_module_path=caller_module_path,
-            explicit_path=explicit_path,
-            search_locations=search_locations,
             verbosity=verbosity,
             **kwargs
         )

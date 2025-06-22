@@ -1,0 +1,28 @@
+# LLM configuration
+providers:
+  openai:
+    api_key: YOUR_OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    models:
+      - name: gpt-4
+        model: gpt-4
+        tags:
+          - chat
+          - large
+        description: OpenAI's GPT-4 model
+      - name: gpt-3.5-turbo
+        model: gpt-3.5-turbo
+        tags:
+          - chat
+          - small
+        description: OpenAI's GPT-3.5 Turbo model
+  anthropic:
+    api_key: YOUR_ANTHROPIC_API_KEY
+    base_url: https://api.anthropic.com/v1
+    models:
+      - name: claude-3-opus
+        model: claude-3-opus-20240229
+        tags:
+          - chat
+          - large
+        description: Anthropic's Claude 3 Opus model

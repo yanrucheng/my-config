@@ -1,0 +1,3 @@
+# Base configuration
+app_name: MyConfigApp
+environment: development

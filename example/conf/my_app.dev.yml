@@ -1,0 +1,9 @@
+# Environment-aware configuration for development
+app_env: development
+database:
+  host: dev_db.example.com
+  port: 5432
+  user: dev_user
+  password: dev_password
+logging:
+  level: DEBUG

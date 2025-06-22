@@ -123,8 +123,6 @@ class LLMConfig(BaseConfig[ModelConfig]):
     def __init__(
         self,
         filename: Optional[str] = None,
-        explicit_path: Optional[str] = None,
-        search_locations: Optional[List[str]] = None,
         verbosity: Verbosity = Verbosity.ONCE,
         **kwargs: Any
     ):
@@ -132,44 +130,20 @@ class LLMConfig(BaseConfig[ModelConfig]):
         
         Args:
             filename: Name of the config file to search for (default: llm_config.yml)
-            explicit_path: Full path to the config file (takes precedence over filename)
-            search_locations: List of directories to search for the config file
             verbosity: Logging verbosity level
             **kwargs: Additional arguments passed to BaseConfig
         """
         # Set default filename if none provided
-        if filename is None and explicit_path is None:
+        if filename is None:
             filename = self.CONFIG_FILENAME
-            
-        # Set default search locations if none provided
-        if search_locations is None and explicit_path is None:
-            search_locations = self._get_default_search_locations()
             
         super().__init__(
             filename=filename,
-            explicit_path=explicit_path,
-            search_locations=search_locations,
             verbosity=verbosity,
             **kwargs
         )
     
-    def _get_default_search_locations(self) -> List[str]:
-        """Get default search locations for LLM config files.
-        
-        Returns:
-            List of default directories to search for config files
-        """
-        default_locations = [
-            ".",  # Current directory
-            "./config",  # Config subdirectory
-            "./configs",  # Configs subdirectory
-            str(Path.home() / ".config"),  # User config directory
-            "/etc",  # System config directory (Unix-like systems)
-        ]
-        
-        # Filter out non-existent directories
-        return [loc for loc in default_locations if Path(loc).exists()]
-    
+
     def _process_config(self, config_data: Dict[str, Any]) -> Dict[str, ModelConfig]:
         """Process LLM-specific provider configuration.
         
