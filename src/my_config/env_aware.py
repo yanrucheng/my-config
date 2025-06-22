@@ -89,14 +89,25 @@ class EnvAwareConfig(SingletonFileLoader):
 
         # Call parent init but preserve our loaded_filepath
         temp_filepath = getattr(self, 'loaded_filepath', None)
-        super().__init__(**kwargs)
+        
+        # Provide required parameters to parent constructor
+        # Since we've already resolved the file path, we can use explicit_path
+        if temp_filepath:
+            super().__init__(explicit_path=temp_filepath, **kwargs)
+        else:
+            # If no file was found, still need to provide at least one parameter
+            # Use the first filename from search order as fallback
+            fallback_filename = self.env_search_order[0] if self.env_search_order else "config.yml"
+            super().__init__(
+                filename=fallback_filename,
+                caller_module_path=self.caller_module_path,
+                search_locations=self.search_locations,
+                **kwargs
+            )
+        
+        # Restore our resolved filepath
         if temp_filepath is not None:
             self.loaded_filepath = temp_filepath
-
-    @property
-    def filepath(self) -> Optional[str]:
-        """Returns the path to the loaded configuration file."""
-        return self.loaded_filepath
 
     # You can add methods here to load and parse the config content
     # For example, if it's a JSON or YAML file.

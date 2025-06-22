@@ -9,7 +9,8 @@ import yaml
 import os
 import inspect
 
-from jinnang.common import SingletonFileLoader
+from jinnang.common.patterns import SingletonFileLoader
+from jinnang.verbosity import Verbosity
 
 logger = logging.getLogger(__name__)
 
@@ -18,26 +19,46 @@ T = TypeVar('T')
 class BaseConfig(SingletonFileLoader, Generic[T]):
     """Base configuration class with caller-aware file loading"""
     
-    def __init__(self, filename: str = None,  caller_module_path: Optional[str] = None, **kwargs: Any):
-        
-        if filename is None:
+    def __init__(
+        self, 
+        filename: Optional[str] = None,
+        caller_module_path: Optional[str] = None,
+        explicit_path: Optional[str] = None,
+        search_locations: Optional[list] = None,
+        verbosity: Verbosity = Verbosity.FULL,
+        **kwargs: Any
+    ):
+        # Set default filename if none provided
+        if filename is None and explicit_path is None:
             filename = 'conf/conf.yml'
             logger.warning(f'It is not recommended to pass empty filename to BaseConfig. filename is set to default value: {filename}')
         
+        # Determine the path of the calling module dynamically if not provided
         if caller_module_path is None:
-            # Determine the path of the calling module dynamically
             frame = inspect.currentframe()
             if frame is not None and frame.f_back is not None:
                 caller_module_path = frame.f_back.f_globals.get('__file__')
             if caller_module_path is None:
                 logger.warning("Could not determine caller_module_path automatically. Please provide it explicitly.")
 
-        super().__init__(filename, caller_module_path, **kwargs)
-        self._data: Dict[str, T] = {}
-        self.data: Dict[str, T] = {}
-        self.load_from_file()
-        self.config = self._process_config(self._data)
-        self.data = self.config  # Make data accessible via get() method
+        # Initialize SingletonFileLoader with proper parameters
+        super().__init__(
+            filename=filename,
+            caller_module_path=caller_module_path,
+            explicit_path=explicit_path,
+            search_locations=search_locations,
+            verbosity=verbosity,
+            **kwargs
+        )
+        
+        # Initialize data attributes only once per singleton instance
+        if not hasattr(self, '_config_initialized'):
+            self._data: Dict[str, T] = {}
+            self.data: Dict[str, T] = {}
+            self.load_from_file()
+            self.config = self._process_config(self._data)
+            self.data = self.config  # Make data accessible via get() method
+            self._config_initialized = True
 
     
     def get(self, name: str, default: Optional[T] = None) -> Optional[T]:
@@ -58,8 +79,14 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
 
     def load_from_file(self) -> None:
         """Generic file loading that child classes can use"""
+        # Check if file was successfully loaded by SingletonFileLoader
+        if not self.loaded_filepath:
+            logger.warning("No configuration file was loaded by SingletonFileLoader")
+            self._data = {}
+            return
+            
         try:
-            path = self.filepath
+            path = self.loaded_filepath
             
             # Use a try-except block for logging to prevent recursion
             try:
