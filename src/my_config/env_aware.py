@@ -1,6 +1,7 @@
 import os
 from typing import Optional, List, Dict, Any
-from jinnang.common import SingletonFileLoader
+from jinnang.common.patterns import SingletonFileLoader
+from jinnang.verbosity import Verbosity
 
 class EnvAwareConfig(SingletonFileLoader):
     """
@@ -20,17 +21,30 @@ class EnvAwareConfig(SingletonFileLoader):
 
     Usage:
         # Default filenames (config.prod.json, config.boe.json, config.dev.json)
-        config = EnvAwareConfig(base_filename='config.json', caller_module_path=__file__)
-        print(config.filepath)
+        config = EnvAwareConfig(
+            base_filename='config.json', 
+            caller_module_path=__file__,
+            verbosity=Verbosity.FULL
+        )
+        print(config.loaded_filepath)
 
-        # Custom filenames
+        # Custom filenames with search locations
         custom_config = EnvAwareConfig(
             prod_filename='my_app.prod.yaml',
             boe_filename='my_app.boe.yaml',
             dev_filename='my_app.dev.yaml',
-            caller_module_path=__file__
+            caller_module_path=__file__,
+            search_locations=['./config', '/etc/myapp'],
+            verbosity=Verbosity.DETAIL
         )
-        print(custom_config.filepath)
+        print(custom_config.loaded_filepath)
+
+        # Minimal verbosity for production use
+        prod_config = EnvAwareConfig(
+            base_filename='app.yml',
+            caller_module_path=__file__,
+            verbosity=Verbosity.ONCE
+        )
     """
 
     def __init__(
@@ -41,73 +55,63 @@ class EnvAwareConfig(SingletonFileLoader):
         dev_filename: Optional[str] = None,
         caller_module_path: Optional[str] = None,
         search_locations: Optional[List[str]] = None,
+        verbosity: Verbosity = Verbosity.FULL,
         **kwargs: Any
     ):
+        # Store environment-specific parameters for singleton initialization
         if not hasattr(self, '_env_aware_initialized'):
             self._env_aware_initialized = True
-
+            
             self.base_filename = base_filename
             self.prod_filename = prod_filename
             self.boe_filename = boe_filename
             self.dev_filename = dev_filename
-            self.caller_module_path = caller_module_path
-            self.search_locations = search_locations
-
+            
             # Determine the effective filenames with fallback to base_filename
             effective_prod_filename = self.prod_filename or (f"{base_filename.rsplit('.', 1)[0]}.prod.{base_filename.rsplit('.', 1)[1]}" if base_filename else None)
             effective_boe_filename = self.boe_filename or (f"{base_filename.rsplit('.', 1)[0]}.boe.{base_filename.rsplit('.', 1)[1]}" if base_filename else None)
             effective_dev_filename = self.dev_filename or (f"{base_filename.rsplit('.', 1)[0]}.dev.{base_filename.rsplit('.', 1)[1]}" if base_filename else None)
-
+            
             # Define the search order for environment-specific files
             self.env_search_order = []
             if effective_prod_filename: self.env_search_order.append(effective_prod_filename)
             if effective_boe_filename: self.env_search_order.append(effective_boe_filename)
             if effective_dev_filename: self.env_search_order.append(effective_dev_filename)
-
-            found_file = False
+            
+            # Try to find the first available environment-specific config file
+            found_filename = None
             for filename_to_try in self.env_search_order:
                 try:
-                    # Attempt to resolve the file path using the parent's method
+                    # Use parent's resolve_file_path to check if file exists
                     resolved_path = self.resolve_file_path(
                         filename=filename_to_try,
-                        caller_module_path=self.caller_module_path,
-                        search_locations=self.search_locations
+                        caller_module_path=caller_module_path,
+                        search_locations=search_locations
                     )
-                    self.loaded_filepath = resolved_path
-                    print(f"Found config file: {self.loaded_filepath} (for {filename_to_try})")
-                    found_file = True
+                    found_filename = filename_to_try
                     break
                 except FileNotFoundError:
-                    print(f"Config file not found: {filename_to_try}. Trying next environment...")
-
-            if not found_file:
+                    continue
+            
+            # If no environment-specific file found, raise error
+            if not found_filename:
                 raise FileNotFoundError(
                     f"Could not find any environment-specific config file "
                     f"(tried: {', '.join(self.env_search_order)}) "
-                    f"in specified locations: {self.search_locations or 'default'}."
+                    f"in specified locations: {search_locations or 'default'}."
                 )
-
-        # Call parent init but preserve our loaded_filepath
-        temp_filepath = getattr(self, 'loaded_filepath', None)
+            
+            # Store the found filename for parent initialization
+            self._resolved_filename = found_filename
         
-        # Provide required parameters to parent constructor
-        # Since we've already resolved the file path, we can use explicit_path
-        if temp_filepath:
-            super().__init__(explicit_path=temp_filepath, **kwargs)
-        else:
-            # If no file was found, still need to provide at least one parameter
-            # Use the first filename from search order as fallback
-            fallback_filename = self.env_search_order[0] if self.env_search_order else "config.yml"
-            super().__init__(
-                filename=fallback_filename,
-                caller_module_path=self.caller_module_path,
-                search_locations=self.search_locations,
-                **kwargs
-            )
-        
-        # Restore our resolved filepath
-        if temp_filepath is not None:
-            self.loaded_filepath = temp_filepath
+        # Initialize SingletonFileLoader with proper parameters
+        super().__init__(
+            filename=getattr(self, '_resolved_filename', None),
+            caller_module_path=caller_module_path,
+            search_locations=search_locations,
+            verbosity=verbosity,
+            **kwargs
+        )
 
     # You can add methods here to load and parse the config content
     # For example, if it's a JSON or YAML file.
