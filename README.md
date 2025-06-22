@@ -1,128 +1,184 @@
-# My Config
+# my-config
 
-A reusable configuration management package for Python applications.
+`my-config` is a robust and flexible configuration management library for Python applications, designed to simplify the loading and management of application settings. It supports environment-aware configurations, secret management via environment variables, and structured loading for various application components like Language Model (LLM) configurations.
 
 ## Features
 
-- Base configuration with file loading capabilities
-- Environment-aware configuration (DEV/BOE/PROD)
-- Specialized configuration for LLM models
-- Singleton pattern implementation for efficient configuration management
+-   **Base Configuration**: Load configurations from YAML files with environment variable resolution.
+-   **Environment-Aware Configuration**: Automatically load environment-specific configurations (e.g., `dev`, `prod`) based on the `APP_ENV` environment variable.
+-   **LLM Configuration**: Specialized support for managing Language Model API keys, base URLs, and model-specific settings.
+-   **Singleton Pattern**: Ensures efficient resource usage by loading configuration files only once.
+-   **Caller-Aware File Loading**: Intelligently locates configuration files relative to the calling module.
+-   **Environment Variable Resolution**: Seamlessly injects environment variables into configuration values using `${VAR_NAME}` syntax.
 
 ## Installation
 
-This package is not published to PyPI. You can install it using one of the following methods:
-
-### From Git Repository
+`my-config` is not yet published to PyPI. You can install it directly from the GitHub repository:
 
 ```bash
-pip install git+https://github.com/yourusername/my-config.git@<version>:egg=my_config
+pip install git+https://github.com/yanrucheng/my-config.git
 ```
 
-Or specify it in requirements.txt:
-
-```
-git+https://github.com/yourusername/my-config.git@v0.1.0
-```
-
-### Local Installation
+Alternatively, for local development:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/my-config.git
+git clone https://github.com/yanrucheng/my-config.git
 cd my-config
-
-# Install in development mode
 pip install -e .
 ```
 
-# My Config
+## Usage Examples
 
-A robust configuration management library for Python applications.
+This section demonstrates how to use `my-config` classes with practical examples. For a complete runnable example, refer to the <mcfile name="example.py" path="example/example.py"></mcfile> file in the `example/` directory.
 
-## Features
+### 1. BaseConfig: Loading General Configurations
 
-- Singleton-based configuration classes
-- File-based configuration with YAML support
-- Environment-aware configuration loading
-- Recursive configuration loading protection
-- Robust error handling
+<mcsymbol name="BaseConfig" filename="base.py" path="src/my_config/base.py" startline="14" type="class"></mcsymbol> is the foundational class for loading configurations from a specified YAML file. It supports resolving environment variables within the configuration.
 
-## Usage
+**Configuration File (`conf/base.yml`):
 
-### Basic Configuration
+```yaml
+database:
+  host: localhost
+  port: 5432
+  username: admin
+  password: ${DB_PASSWORD}
 
-```python
-from my_config import BaseConfig
-
-class MyAppConfig(BaseConfig):
-    CONFIG_FILENAME = "./conf/my_app_config.yml"
-
-# Get the singleton instance
-config = MyAppConfig.get_instance()
-
-# Get configuration values with defaults
-db_host = config.get('database', {}).get('host', 'localhost')
-port = config.get('port', 8080)
-
-# Access configuration values
-db_url = config.get("database_url")
+app:
+  name: MyApplication
+  version: 1.0.0
 ```
 
-### Environment-Aware Configuration
+**Python Usage (`example/example.py` excerpt):
 
 ```python
-from my_config import EnvAwareConfig
+import os
+from my_config.base import BaseConfig
+from jinnang.verbosity import Verbosity
 
-class MyEnvConfig(EnvAwareConfig):
-    DEV_CONFIG_FILENAME = "./conf/dev_config.yml"
-    BOE_CONFIG_FILENAME = "./conf/boe_config.yml"
-    PROD_CONFIG_FILENAME = "./conf/prod_config.yml"
+# Set an environment variable that will be resolved in the config
+os.environ['DB_PASSWORD'] = 'supersecretpassword'
 
-# Configuration will be loaded based on APP_ENV environment variable
-config = MyEnvConfig.get_instance()
+base_config = BaseConfig(
+    filename='conf/base.yml',
+    verbosity=Verbosity.FULL, # Or Verbosity.ONCE for less verbose output
+    caller_module_path=__file__,
+)
+
+print("\n--- BaseConfig ---")
+print(f"Loaded from: {base_config.loaded_filepath}")
+print(f"Database Host: {base_config.get('database.host')}")
+print(f"Database Password: {base_config.get('database.password')}") # Resolved from env var
+print(f"Application Name: {base_config.get('app.name')}")
 ```
 
-## Extending
+### 2. EnvAwareConfig: Environment-Specific Configurations
 
-You can create your own configuration classes by extending the base classes:
+<mcsymbol name="EnvAwareConfig" filename="env_aware.py" path="src/my_config/env_aware.py" startline="4" type="class"></mcsymbol> extends <mcsymbol name="BaseConfig" filename="base.py" path="src/my_config/base.py" startline="14" type="class"></mcsymbol> to load configurations based on the `APP_ENV` environment variable. It searches for files in a predefined order (production, boe, development).
+
+**Configuration Files (e.g., `conf/my_app.dev.yml`):
+
+```yaml
+app_env: development
+debug_mode: true
+api_url: http://dev.api.example.com
+```
+
+**Python Usage (`example/example.py` excerpt):
 
 ```python
-from my_config import BaseConfig
-from typing import Dict, Any
+import os
+from my_config.env_aware import EnvAwareConfig
+from jinnang.verbosity import Verbosity
 
-class CustomConfig(BaseConfig[Dict[str, Any]]):
-    CONFIG_FILENAME = "./custom_config.yml"
-    
-    def _process_config(self) -> None:
-        # Custom processing logic
-        self.data = {k.upper(): v for k, v in self._data.items()}
+# Set APP_ENV to 'development' to load the dev config
+os.environ['APP_ENV'] = 'development'
+
+env_aware_config = EnvAwareConfig(
+    base_filename='conf/my_app.yml', # Base name for env-aware config
+    dev_filename='conf/my_app.dev.yml', # Explicitly specify dev filename
+    verbosity=Verbosity.FULL,
+    caller_module_path=__file__,
+)
+
+print("\n--- EnvAwareConfig ---")
+print(f"Loaded from: {env_aware_config.loaded_filepath}")
+print(f"Application Environment: {env_aware_config.get('app_env')}")
+print(f"Debug Mode: {env_aware_config.get('debug_mode')}")
 ```
 
-## Environment Variables
+### 3. LLMConfig: Managing Language Model Configurations
 
-The package uses the following environment variables:
+<mcsymbol name="LLMConfig" filename="llm.py" path="src/my_config/llm.py" startline="99" type="class"></mcsymbol> is a specialized configuration class for managing Language Model settings, including API keys and base URLs. It processes a `providers` section in the YAML file to create <mcsymbol name="ModelConfig" filename="llm.py" path="src/my_config/llm.py" startline="15" type="class"></mcsymbol> objects.
 
-- `APP_ENV`: Determines the environment ("dev", "boe", or "production")
-- `CONFIG_PATH`: Specifies the path to a configuration file for BaseConfig
-- `ENV_CONFIG_PATH`: Specifies the path to a configuration file for EnvAwareConfig
+**Configuration File (`conf/llm.yml`):
 
-## Configuration File Resolution
+```yaml
+providers:
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    base_url: https://api.openai.com/v1
+    models:
+      - name: openai/gpt-4
+        model: gpt-4
+        tags: ["chat", "large"]
+        description: OpenAI's most advanced GPT-4 model.
+      - name: openai/gpt-3.5-turbo
+        model: gpt-3.5-turbo
+        tags: ["chat", "fast"]
 
-The package uses a priority-based approach to locate configuration files:
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    base_url: https://api.anthropic.com/v1
+    models:
+      - name: anthropic/claude-3-opus
+        model: claude-3-opus-20240229
+        tags: ["chat", "large"]
+```
 
-1. **Code-specified path** (highest priority): Paths explicitly set in the code
-2. **Environment variable**: Path specified via environment variables
-3. **Default locations**: Search in standard locations
+**Python Usage (`example/example.py` excerpt):
 
-### Example
+```python
+import os
+from my_config.llm import LLMConfig
+from jinnang.verbosity import Verbosity
+
+# Set the environment variable for the API key
+os.environ["OPENAI_API_KEY"] = "sk-YOUR_ACTUAL_OPENAI_API_KEY_HERE"
+
+llm_config = LLMConfig(
+    filename='conf/llm.yml',
+    verbosity=Verbosity.FULL,
+    caller_module_path=__file__,
+)
+
+print("\n--- LLMConfig ---")
+# Access a specific model configuration
+openai_gpt4_config = llm_config.get("openai/gpt-4")
+
+if openai_gpt4_config:
+    print(f"OpenAI GPT-4 API Key: {openai_gpt4_config.api_key}")
+    print(f"OpenAI GPT-4 Base URL: {openai_gpt4_config.base_url}")
+    print(f"OpenAI GPT-4 Model Name: {openai_gpt4_config.model}")
+    print(f"OpenAI GPT-4 Tags: {openai_gpt4_config.tags}")
+else:
+    print("OpenAI GPT-4 configuration not found.")
+
+# Clean up the environment variable (optional, for script execution)
+del os.environ["OPENAI_API_KEY"]
+```
+
+## Development
+
+To contribute or run tests, clone the repository and install dependencies:
 
 ```bash
-# Set the configuration file path
-export CONFIG_PATH=/path/to/your/config.yml
-
-# Run your application
-python your_app.py
+git clone https://github.com/yanrucheng/my-config.git
+cd my-config
+pip install -e .[dev]
+pytest
 ```
 
-Detailed logging is provided to show which configuration files were detected and which one was ultimately selected.
+## License
+
+This project is licensed under the MIT License - see the <mcfile name="LICENSE" path="LICENSE"></mcfile> file for details.
