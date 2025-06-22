@@ -59,3 +59,13 @@ if llm_config.data:
     # Show model API URL construction
     if gpt4_model:
         print(f"GPT-4 API URL: {gpt4_model.get_full_api_url()}")
+
+    # Get primary LLM model
+    primary_llm = llm_config.get_primary_model_config('llm')
+    if primary_llm:
+        print(f"Primary LLM model: {primary_llm.name} ({primary_llm.model}) - Tags: {primary_llm.tags}")
+
+    # Get primary VLM model
+    primary_vlm = llm_config.get_primary_model_config('vlm')
+    if primary_vlm:
+        print(f"Primary VLM model: {primary_vlm.name} ({primary_vlm.model}) - Tags: {primary_vlm.tags}")
