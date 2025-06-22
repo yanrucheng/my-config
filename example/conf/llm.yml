@@ -1,7 +1,7 @@
 # LLM configuration
 providers:
   openai:
-    api_key: YOUR_OPENAI_API_KEY
+    api_key: ${LLM_API_KEY}
     base_url: https://api.openai.com/v1
     models:
       - name: gpt-4

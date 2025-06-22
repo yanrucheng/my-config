@@ -118,12 +118,13 @@ class LLMConfig(BaseConfig[ModelConfig]):
     - Includes proper error handling and validation
     - Uses singleton pattern for efficient resource usage
     """
-    CONFIG_FILENAME = "llm_config.yml"
+    CONFIG_FILENAME = "conf/llm.yml"
     
     def __init__(
         self,
         filename: Optional[str] = None,
         verbosity: Verbosity = Verbosity.ONCE,
+        caller_module_path: Optional[str] = None,
         **kwargs: Any
     ):
         """Initialize LLM configuration with flexible loading options.
@@ -140,6 +141,7 @@ class LLMConfig(BaseConfig[ModelConfig]):
         super().__init__(
             filename=filename,
             verbosity=verbosity,
+            caller_module_path=caller_module_path or __file__,
             **kwargs
         )
     

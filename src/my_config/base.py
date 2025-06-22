@@ -93,7 +93,7 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     config_data = yaml.safe_load(f) or {}
-                self._data = config_data
+                self._data = self._resolve_env_vars(config_data)
                 
                 # Log configuration details - wrapped in try-except to prevent recursion
                 try:
@@ -125,6 +125,29 @@ class BaseConfig(SingletonFileLoader, Generic[T]):
     def _process_config(self, config: T) -> T:
         """Hook for subclasses to process the loaded configuration."""
         return config
+
+    def _resolve_env_vars(self, data: Any) -> Any:
+        """Recursively resolves environment variable placeholders in the config data.
+
+        Placeholders are in the format ${ENV_VAR_NAME}.
+        """
+        if isinstance(data, dict):
+            return {k: self._resolve_env_vars(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._resolve_env_vars(elem) for elem in data]
+        elif isinstance(data, str):
+            if data.startswith('${') and data.endswith('}'):
+                env_var_name = data[2:-1]
+                env_value = os.getenv(env_var_name)
+                if env_value is not None:
+                    logger.info(f"Resolved environment variable '{env_var_name}' for config value.")
+                    return env_value
+                else:
+                    logger.warning(f"Environment variable '{env_var_name}' not found. Keeping placeholder as is.")
+                    return data
+            return data
+        else:
+            return data
 
 
 class DefaultConfig(BaseConfig):

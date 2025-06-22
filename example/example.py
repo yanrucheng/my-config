@@ -29,43 +29,34 @@ print("\n--- EnvAwareConfig ---")
 print(f"Loaded from: {env_aware_config.loaded_filepath}")
 print(f"Content (app_env): {env_aware_config.data.get('app_env')}")
 
-# --- Load LLMConfig ---
+import os
+from my_config.llm import LLMConfig
+
+# Example Usage:
+# Set the environment variable (in a real scenario, this would be set outside the script)
+os.environ["LLM_API_KEY"] = "sk-YOUR_ACTUAL_API_KEY_HERE"
+
+# 1. Load LLM configuration
 llm_config = LLMConfig(
     filename='conf/llm.yml',
     verbosity=Verbosity.FULL,
     caller_module_path=__file__,
 )
-print("\n--- LLMConfig ---")
-print(f"Loaded from: {llm_config.loaded_filepath}")
-print(f"Number of models: {len(llm_config.data)}")
-if llm_config.data:
-    # Demonstrate LLMConfig-specific model access methods
-    print(f"Available models: {list(llm_config.data.keys())}")
-    
-    # Get specific model by name
-    gpt4_model = llm_config.get('openai/gpt-4')
-    if gpt4_model:
-        print(f"GPT-4 model: {gpt4_model.name} ({gpt4_model.model}) - Tags: {gpt4_model.tags}")
-    
-    # Get model by tag
-    large_model = llm_config.get_model_by_tag('large')
-    if large_model:
-        print(f"First large model: {large_model.name}")
-    
-    # Get all models with specific tag
-    chat_models = llm_config.get_models_by_tag('chat')
-    print(f"Chat models: {[model.name for model in chat_models]}")
-    
-    # Show model API URL construction
-    if gpt4_model:
-        print(f"GPT-4 API URL: {gpt4_model.get_full_api_url()}")
 
-    # Get primary LLM model
-    primary_llm = llm_config.get_primary_model_config('llm')
-    if primary_llm:
-        print(f"Primary LLM model: {primary_llm.name} ({primary_llm.model}) - Tags: {primary_llm.tags}")
+# Access a specific model configuration
+openai_gpt4_config = llm_config.get("openai/gpt-4")
 
-    # Get primary VLM model
-    primary_vlm = llm_config.get_primary_model_config('vlm')
-    if primary_vlm:
-        print(f"Primary VLM model: {primary_vlm.name} ({primary_vlm.model}) - Tags: {primary_vlm.tags}")
+if openai_gpt4_config:
+    print(f"OpenAI GPT-4 API Key: {openai_gpt4_config.api_key}")
+    print(f"OpenAI GPT-4 Base URL: {openai_gpt4_config.base_url}")
+else:
+    print("OpenAI GPT-4 configuration not found.")
+
+# Clean up the environment variable (optional, for script execution)
+del os.environ["LLM_API_KEY"]
+
+# 2. Load My App configuration
+# my_app_config = MyAppConfig()
+# print(f"My App Name: {my_app_config.get('app_name')}")
+# print(f"My App Version: {my_app_config.get('version')}")
+# print(f"My App Debug Mode: {my_app_config.get('debug_mode')}")
