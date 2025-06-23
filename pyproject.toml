@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 dependencies = [
     "pyyaml>=6.0",
     "pytz",
-    "jinnang @ git+https://github.com/yanrucheng/jinnang-utils@v0.2.2.dev06222159#egg=jinnang",
+    "jinnang>=0.2.0"
 ]
 
 [project.optional-dependencies]
@@ -19,4 +19,6 @@ dev = [
     "pytest>=7.0",
     "black",
     "isort",
+    "build",
+    "twine",
 ]
