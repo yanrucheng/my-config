@@ -22,3 +22,6 @@ dev = [
     "build",
     "twine",
 ]
+
+[tool.pip]
+extra-index-url = "https://pypi.org/simple"
