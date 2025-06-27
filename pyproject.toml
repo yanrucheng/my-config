@@ -7,7 +7,7 @@ name = "my_config"
 version = "0.1.0"
 description = "Configuration management for Python applications"
 authors = [{name = "Cheng Yanru", email = "yanru@cyanru.com"}]
-requires-python = ">=3.8"
+requires-python = ">=3.6"
 dependencies = [
     "pyyaml>=6.0",
     "pytz",
