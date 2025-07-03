@@ -6,15 +6,16 @@ providers:
     models:
       - name: gpt-4
         model: gpt-4
-        tags:
-          - primary
-          - llm
+        purpose:
+          - llm_primary
+          - vlm_primary
+        notes:
           - chat
           - large
         description: OpenAI's GPT-4 model
       - name: gpt-3.5-turbo
         model: gpt-3.5-turbo
-        tags:
+        notes:
           - chat
           - small
         description: OpenAI's GPT-3.5 Turbo model
@@ -24,9 +25,7 @@ providers:
     models:
       - name: claude-3-opus
         model: claude-3-opus-20240229
-        tags:
-          - primary
-          - vlm
+        notes:
           - chat
           - large
         description: Anthropic's Claude 3 Opus model

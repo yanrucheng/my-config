@@ -127,7 +127,8 @@ class TestEnvVarIntegration(unittest.TestCase):
                         {
                             'name': 'gpt-4-integration',
                             'model': 'gpt-4',
-                            'tags': ['chat', 'large', 'primary', 'llm'],
+                            'notes': ['chat', 'large'],
+                            'purpose': ['llm_primary'],
                             'description': 'Integration test model'
                         }
                     ]
@@ -139,7 +140,8 @@ class TestEnvVarIntegration(unittest.TestCase):
                         {
                             'name': 'custom-model',
                             'model': 'custom-1',
-                            'tags': ['chat', 'primary', 'vlm'],
+                            'notes': ['chat'],
+                            'purpose': ['vlm_primary'],
                             'description': 'Custom model with missing env var'
                         }
                     ]
@@ -159,13 +161,18 @@ class TestEnvVarIntegration(unittest.TestCase):
             )
             
             # Test resolved environment variables
-            openai_model = config.get('openai/gpt-4-integration')
+            openai_model = config.get_model(model_name='gpt-4-integration')
             self.assertIsNotNone(openai_model)
             self.assertEqual(openai_model.api_key, 'sk-integration-test-key')
             self.assertEqual(openai_model.base_url, 'https://integration.api.com')
+
+            # Test getting by purpose
+            primary_llm = config.get_model(purpose='llm_primary')
+            self.assertIsNotNone(primary_llm)
+            self.assertEqual(primary_llm.name, 'openai/gpt-4-integration')
             
             # Test missing environment variable (should remain as placeholder)
-            custom_model = config.get('custom/custom-model')
+            custom_model = config.get_model(model_name='custom-model')
             self.assertIsNotNone(custom_model)
             self.assertEqual(custom_model.api_key, '${MISSING_API_KEY}')
             self.assertEqual(custom_model.base_url, 'https://custom.api.com')

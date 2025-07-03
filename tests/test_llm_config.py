@@ -31,7 +31,8 @@ class TestLLMConfigEnvVars(unittest.TestCase):
                          {
                              "name": "gpt-4",
                              "model": "gpt-4",
-                             "tags": ["chat", "large", "primary", "llm"]
+                             "notes": ["chat", "large"],
+                             "purpose": ["llm_primary"]
                          }
                      ]
                  },
@@ -42,7 +43,8 @@ class TestLLMConfigEnvVars(unittest.TestCase):
                          {
                              "name": "claude-3-sonnet",
                              "model": "claude-3-sonnet-20240229",
-                             "tags": ["chat", "large", "primary", "vlm"]
+                             "notes": ["chat", "large"],
+                             "purpose": ["vlm_primary"]
                          }
                      ]
                  }
@@ -93,13 +95,14 @@ class TestLLMConfig(unittest.TestCase):
                         {
                             "name": "gpt-4",
                             "model": "gpt-4",
-                            "tags": ["chat", "large", "primary", "llm"],
+                            "notes": ["chat", "large"],
+                            "purpose": ["llm_primary"],
                             "description": "OpenAI GPT-4 model"
                         },
                         {
                             "name": "gpt-3.5-turbo",
                             "model": "gpt-3.5-turbo",
-                            "tags": ["chat", "small"],
+                            "notes": ["chat", "small"],
                             "description": "OpenAI GPT-3.5 Turbo model"
                         }
                     ]
@@ -111,7 +114,8 @@ class TestLLMConfig(unittest.TestCase):
                         {
                             "name": "claude-3-opus",
                             "model": "claude-3-opus-20240229",
-                            "tags": ["chat", "large", "primary", "vlm"],
+                            "notes": ["chat", "large"],
+                            "purpose": ["vlm_primary"],
                             "description": "Anthropic Claude 3 Opus model"
                         }
                     ]
@@ -142,78 +146,45 @@ class TestLLMConfig(unittest.TestCase):
             self.assertIn("openai/gpt-3.5-turbo", config.data)
             self.assertIn("anthropic/claude-3-opus", config.data)
 
-    def test_llm_config_get_model(self):
-        """Test getting specific models by name."""
+    def test_get_model_by_name(self):
+        """Test getting a model by its name."""
         with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
-            config = LLMConfig(
-                filename="llm.yml",
-                caller_module_path=__file__,
-                verbosity=Verbosity.ONCE
-            )
-            
-            # Test getting existing model
-            gpt4_model = config.get("openai/gpt-4")
-            self.assertIsNotNone(gpt4_model)
-            self.assertEqual(gpt4_model.name, "openai/gpt-4")
-            self.assertEqual(gpt4_model.model, "gpt-4")
-            self.assertEqual(gpt4_model.provider, "openai")
-            self.assertEqual(gpt4_model.api_key, "test_openai_key")
-            
-            # Test getting non-existing model
-            non_existing = config.get("nonexistent/model")
-            self.assertIsNone(non_existing)
+            config = LLMConfig(filename="llm.yml", verbosity=Verbosity.ONCE)
+            model = config.get_model(model_name="gpt-4")
+            self.assertIsNotNone(model)
+            self.assertEqual(model.name, "openai/gpt-4")
 
-    def test_llm_config_get_model_by_tag(self):
-        """Test getting models by tag."""
+    def test_get_model_by_purpose(self):
+        """Test getting a model by its purpose."""
         with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
-            config = LLMConfig(
-                filename="llm.yml",
-                caller_module_path=__file__,
-                verbosity=Verbosity.ONCE
-            )
-            
-            # Test getting model by tag
-            large_model = config.get_model_by_tag("large")
-            self.assertIsNotNone(large_model)
-            self.assertIn("large", large_model.tags)
-            
-            # Test getting model by non-existing tag
-            non_existing = config.get_model_by_tag("nonexistent")
-            self.assertIsNone(non_existing)
+            config = LLMConfig(filename="llm.yml", verbosity=Verbosity.ONCE)
+            model = config.get_model(purpose="llm_primary")
+            self.assertIsNotNone(model)
+            self.assertEqual(model.name, "openai/gpt-4")
 
-    def test_llm_config_get_models_by_tag(self):
-        """Test getting multiple models by tag."""
+    def test_get_model_by_purpose_vlm(self):
+        """Test getting a vlm model by its purpose."""
         with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
-            config = LLMConfig(
-                filename="llm.yml",
-                caller_module_path=__file__,
-                verbosity=Verbosity.ONCE
-            )
-            
-            # Test getting models by tag
-            chat_models = config.get_models_by_tag("chat")
-            self.assertEqual(len(chat_models), 3)  # All models have 'chat' tag
-            
-            large_models = config.get_models_by_tag("large")
-            self.assertEqual(len(large_models), 2)  # gpt-4 and claude-3-opus
-            
-            small_models = config.get_models_by_tag("small")
-            self.assertEqual(len(small_models), 1)  # gpt-3.5-turbo
+            config = LLMConfig(filename="llm.yml", verbosity=Verbosity.ONCE)
+            model = config.get_model(purpose="vlm_primary")
+            self.assertIsNotNone(model)
+            self.assertEqual(model.name, "anthropic/claude-3-opus")
 
-    def test_llm_config_model_api_url(self):
-        """Test model API URL construction."""
+    def test_get_model_conflict(self):
+        """Test error when providing both name and purpose."""
         with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
-            config = LLMConfig(
-                filename="llm.yml",
-                caller_module_path=__file__,
-                verbosity=Verbosity.ONCE
-            )
-            
-            gpt4_model = config.get("openai/gpt-4")
-            self.assertEqual(gpt4_model.get_full_api_url(), "https://api.openai.com/v1")
-            
-            claude_model = config.get("anthropic/claude-3-opus")
-            self.assertEqual(claude_model.get_full_api_url(), "https://api.anthropic.com/v1")
+            config = LLMConfig(filename="llm.yml", verbosity=Verbosity.ONCE)
+            with self.assertRaises(ValueError):
+                config.get_model(model_name="gpt-4", purpose="llm_primary")
+
+    def test_get_model_no_params(self):
+        """Test error when providing no parameters."""
+        with patch('jinnang.path.path.RelPathSeeker.resolve_file_path', return_value=self.llm_config_path):
+            config = LLMConfig(filename="llm.yml", verbosity=Verbosity.ONCE)
+            with self.assertRaises(ValueError):
+                config.get_model()
+
+
 
 
 if __name__ == "__main__":

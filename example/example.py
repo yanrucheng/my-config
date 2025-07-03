@@ -43,14 +43,21 @@ llm_config = LLMConfig(
     caller_module_path=__file__,
 )
 
-# Access a specific model configuration
-openai_gpt4_config = llm_config.get("openai/gpt-4")
+# Access a specific model configuration by name
+openai_gpt4_config = llm_config.get_model(model_name="gpt-4")
 
 if openai_gpt4_config:
-    print(f"OpenAI GPT-4 API Key: {openai_gpt4_config.api_key}")
-    print(f"OpenAI GPT-4 Base URL: {openai_gpt4_config.base_url}")
+    print(f"OpenAI GPT-4 API Key (by name): {openai_gpt4_config.api_key}")
+    print(f"OpenAI GPT-4 Base URL (by name): {openai_gpt4_config.base_url}")
 else:
-    print("OpenAI GPT-4 configuration not found.")
+    print("OpenAI GPT-4 configuration not found by name.")
+
+# Access a model by purpose
+primary_llm = llm_config.get_model(purpose="llm_primary")
+if primary_llm:
+    print(f"Primary LLM ({primary_llm.name}) API Key (by purpose): {primary_llm.api_key}")
+else:
+    print("Primary LLM not found by purpose.")
 
 # Clean up the environment variable (optional, for script execution)
 del os.environ["LLM_API_KEY"]

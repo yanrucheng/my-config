@@ -27,16 +27,18 @@ class ModelConfig:
         provider: Name of the model provider (e.g., 'openai', 'anthropic')
         api_key: API key for authentication
         base_url: Base URL for the provider's API
-        tags: Optional list of tags for categorization
+        notes: Optional list of notes for human readability
         description: Optional human-readable description
+        purpose: Optional list of purposes (e.g., ['llm_primary', 'vlm_primary'])
     """
     name: str
     model: str  # API identifier
     provider: str
     api_key: str
     base_url: str
-    tags: Optional[List[str]] = None
+    notes: Optional[List[str]] = None
     description: Optional[str] = None
+    purpose: Optional[List[str]] = None
     
     def __post_init__(self):
         """Validate and normalize the model configuration after initialization."""
@@ -62,51 +64,16 @@ class ModelConfig:
         # Normalize optional fields
         if self.description:
             self.description = self.description.strip()
-        if self.tags:
-            self.tags = [tag.strip() for tag in self.tags if tag and tag.strip()]
-            if not self.tags:  # If all tags were empty after stripping
-                self.tags = None
+        if self.notes:
+            self.notes = [note.strip() for note in self.notes if note and note.strip()]
+            if not self.notes:
+                self.notes = None
+        if self.purpose:
+            self.purpose = [p.strip() for p in self.purpose if p and p.strip()]
+            if not self.purpose:
+                self.purpose = None
     
-    def has_tag(self, tag: str) -> bool:
-        """Check if the model has a specific tag.
-        
-        Args:
-            tag: The tag to check for
-            
-        Returns:
-            True if the model has the specified tag, False otherwise
-        """
-        return self.tags is not None and tag in self.tags
-    
-    def get_full_api_url(self, endpoint: str = "") -> str:
-        """Get the full API URL for a specific endpoint.
-        
-        Args:
-            endpoint: Optional endpoint to append to the base URL
-            
-        Returns:
-            Complete API URL
-        """
-        if endpoint:
-            endpoint = endpoint.lstrip('/')
-            return f"{self.base_url}/{endpoint}"
-        return self.base_url
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the model configuration to a dictionary.
-        
-        Returns:
-            Dictionary representation of the model configuration
-        """
-        return {
-            'name': self.name,
-            'model': self.model,
-            'provider': self.provider,
-            'api_key': self.api_key,
-            'base_url': self.base_url,
-            'tags': self.tags,
-            'description': self.description
-        }
+
 
 
 class LLMConfig(BaseConfig[ModelConfig]):
@@ -235,8 +202,9 @@ class LLMConfig(BaseConfig[ModelConfig]):
                         provider=provider_name,
                         api_key=provider_data["api_key"],
                         base_url=provider_data["base_url"],
-                        tags=model_data.get("tags"),
-                        description=model_data.get("description")
+                        notes=model_data.get("notes"),
+                        description=model_data.get("description"),
+                        purpose=model_data.get("purpose")
                     )
                     logger.debug(f"Successfully configured model: {model_name}")
                 except Exception as e:
@@ -249,7 +217,7 @@ class LLMConfig(BaseConfig[ModelConfig]):
         return data
 
     def _validate_primary_models(self, processed_data: Dict[str, ModelConfig]) -> None:
-        """Validate that there is exactly one primary model for each type (llm and vlm).
+        """Validate that there is exactly one primary model for each purpose type (llm_primary and vlm_primary).
         
         Args:
             processed_data: Dictionary of processed ModelConfig objects
@@ -257,73 +225,59 @@ class LLMConfig(BaseConfig[ModelConfig]):
         Raises:
             AssertionError: If there is not exactly one primary model of each type
         """
-        for model_type in ['llm', 'vlm']:
+        for purpose_type in ['llm_primary', 'vlm_primary']:
             primary_models = [model for model in processed_data.values()
-                            if model.tags and ('primary' in model.tags) and (model_type in model.tags)]
+                            if model.purpose and purpose_type in model.purpose]
             assert len(primary_models) == 1, (
-                f'There should be one and only one primary {model_type} model. '
+                f'There should be one and only one model with purpose \'{purpose_type}\'. '
                 f'Got {len(primary_models)}. Includes: {[m.name for m in primary_models]}'
             )
 
-    def get_primary_model_config(self, model_type: str = 'llm') -> ModelConfig:
-        """Get the primary model configuration for a given type (llm or vlm).
+    def get_model(
+        self,
+        model_name: Optional[str] = None,
+        purpose: Optional[str] = None,
+        provider_name: Optional[str] = None
+    ) -> Optional[ModelConfig]:
+        """Get a model configuration by name or purpose.
 
         Args:
-            model_type: The type of model to retrieve ('llm' or 'vlm').
+            model_name: The name of the model to find.
+            purpose: The purpose of the model to find (e.g., 'llm_primary').
+            provider_name: Optional provider name to narrow the search (only used with model_name).
 
         Returns:
-            The primary ModelConfig object.
+            ModelConfig if found, None otherwise.
 
         Raises:
-            AssertionError: If there is not exactly one primary model of the specified type.
+            ValueError: If both or neither of model_name and purpose are provided.
         """
-        ms = [model for model in self.data.values()
-                if model.tags and ('primary' in model.tags) and (model_type in model.tags)]
-        assert len(ms) == 1, (
-            f'There should be one and only one primary {model_type} model. '
-            f'Got {len(ms)}. Includes: {[m.name for m in ms]}'
-        )
-        return ms[0]
-    
-    def get_model_by_tag(self, tag: str) -> Optional[ModelConfig]:
-        """Get the first model configuration that has the specified tag.
+        if (model_name and purpose) or (not model_name and not purpose):
+            raise ValueError("Provide either model_name or purpose, but not both.")
+
+        if model_name:
+            return self._get_model_by_name(model_name, provider_name)
         
-        Args:
-            tag: The tag to search for
-            
-        Returns:
-            First ModelConfig with the specified tag, or None if not found
-        """
-        if not tag:
-            logger.warning("Empty tag provided to get_model_by_tag")
-            return None
-            
-        for model in self.data.values():
-            if model.tags and tag in model.tags:
-                logger.debug(f"Found model '{model.name}' with tag '{tag}'")
-                return model
-                
-        logger.debug(f"No model found with tag '{tag}'")
+        if purpose:
+            return self._get_model_by_purpose(purpose)
+
         return None
-    
-    def get_models_by_tag(self, tag: str) -> List[ModelConfig]:
-        """Get all model configurations that have the specified tag.
-        
+
+    def _get_model_by_purpose(self, purpose: str) -> Optional[ModelConfig]:
+        """Get a model by its purpose.
+
         Args:
-            tag: The tag to search for
-            
+            purpose: The purpose of the model to find.
+
         Returns:
-            List of ModelConfig objects with the specified tag
+            ModelConfig if found, None otherwise.
         """
-        if not tag:
-            logger.warning("Empty tag provided to get_models_by_tag")
-            return []
-            
-        models = [model for model in self.data.values() if model.tags and tag in model.tags]
-        logger.debug(f"Found {len(models)} models with tag '{tag}'")
-        return models
-    
-    def get_model(self, model_name: str, provider_name: Optional[str] = None) -> Optional[ModelConfig]:
+        for model in self.data.values():
+            if model.purpose and purpose in model.purpose:
+                return model
+        return None
+
+    def _get_model_by_name(self, model_name: str, provider_name: Optional[str] = None) -> Optional[ModelConfig]:
         """Get a model configuration by name and optional provider.
         
         Args:
@@ -355,43 +309,3 @@ class LLMConfig(BaseConfig[ModelConfig]):
                 
         logger.debug(f"No model found matching '{model_name}'")
         return None
-    
-    def get_providers(self) -> List[str]:
-        """Get a list of all configured providers.
-        
-        Returns:
-            List of provider names
-        """
-        providers = set(model.provider for model in self.data.values())
-        return sorted(list(providers))
-    
-    def get_models_by_provider(self, provider_name: str) -> List[ModelConfig]:
-        """Get all models for a specific provider.
-        
-        Args:
-            provider_name: The name of the provider
-            
-        Returns:
-            List of ModelConfig objects for the specified provider
-        """
-        if not provider_name:
-            logger.warning("Empty provider_name provided to get_models_by_provider")
-            return []
-            
-        models = [model for model in self.data.values() if model.provider == provider_name]
-        logger.debug(f"Found {len(models)} models for provider '{provider_name}'")
-        return models
-    
-    def list_models(self) -> Dict[str, List[str]]:
-        """Get a summary of all configured models grouped by provider.
-        
-        Returns:
-            Dictionary mapping provider names to lists of model names
-        """
-        result = {}
-        for model in self.data.values():
-            if model.provider not in result:
-                result[model.provider] = []
-            result[model.provider].append(model.name.split('/')[-1])  # Just the model name without provider prefix
-            
-        return result
